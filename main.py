@@ -24,3 +24,14 @@ response = client.chat.completions.create(
     ],
 )
 print("Response:", response.choices[0].message.content)
+
+usage_info = response.usage
+completion_details = getattr(usage_info, "completion_tokens_details", None)
+
+usage = {
+    "prompt_tokens": getattr(usage_info, "prompt_tokens", None),
+    "completion_tokens": getattr(usage_info, "completion_tokens", None),
+    "reasoning_tokens": getattr(completion_details, "reasoning_tokens", None),
+}
+
+print(usage)
