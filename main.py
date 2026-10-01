@@ -1,5 +1,5 @@
+import json
 import os
-import subprocess
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -27,12 +27,32 @@ response = client.chat.completions.create(
     tools=tool_registry.TOOLS,
 )
 
-def bash(command):
-    result = subprocess.run(command, shell = True, capture_output=True, text=True)
-    return result.stdout + result.stderr
+message = response.choices[0].message if response.choices else None
+if message and message.tool_calls:
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": user_input},
+        message,
+    ]
+    for tool_call in message.tool_calls:
+        arguments = json.loads(tool_call.function.arguments or "{}")
+        handler = tool_registry.HANDLERS.get(tool_call.function.name)
+        output = handler(**arguments) if handler else f"Unknown tool: {tool_call.function.name}"
+        messages.append(
+            {
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "content": output,
+            }
+        )
+    response = client.chat.completions.create(
+        model=os.getenv("OPENROUTER_MODEL"),
+        messages=messages,
+        tools=tool_registry.TOOLS,
+    )
+    message = response.choices[0].message if response.choices else None
 
-
-print("Response:", response.choices[0].message.content)
+print("Response:", message.content if message else response)
 
 usage_info = response.usage
 completion_details = getattr(usage_info, "completion_tokens_details", None)

@@ -1,3 +1,5 @@
+import subprocess
+
 BASH_TOOL = {
     "type" : "function" , 
     "function" : {
@@ -16,4 +18,10 @@ BASH_TOOL = {
     }
 }
 
+def bash(command):
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    return result.stdout + result.stderr
+
+
 TOOLS = [BASH_TOOL]
+HANDLERS = {"bash": bash}
