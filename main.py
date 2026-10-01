@@ -1,8 +1,10 @@
 import os
+import subprocess
 
 from dotenv import load_dotenv
 from openai import OpenAI
 from pathlib import Path
+from tools import tool_registry
 
 load_dotenv()
 
@@ -22,7 +24,14 @@ response = client.chat.completions.create(
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": user_input},
     ],
+    tools=tool_registry.TOOLS,
 )
+
+def bash(command):
+    result = subprocess.run(command, shell = True, capture_output=True, text=True)
+    return result.stdout + result.stderr
+
+
 print("Response:", response.choices[0].message.content)
 
 usage_info = response.usage
