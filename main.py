@@ -17,23 +17,22 @@ client = OpenAI(
     api_key=os.getenv("OPENROUTER_API_KEY"),
 )
 
-user_input = input("Enter a prompt: ")
-response = client.chat.completions.create(
-    model=os.getenv("OPENROUTER_MODEL"),
-    messages=[
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": user_input},
-    ],
-    tools=tool_registry.TOOLS,
-)
+messages = [
+    {"role": "system", "content": SYSTEM_PROMPT},
+    {"role": "user", "content": input("Enter a prompt: ")},
+]
 
-message = response.choices[0].message if response.choices else None
-if message and message.tool_calls:
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": user_input},
-        message,
-    ]
+while True:
+    response = client.chat.completions.create(
+        model=os.getenv("OPENROUTER_MODEL"),
+        messages=messages,
+        tools=tool_registry.TOOLS,
+    )
+    message = response.choices[0].message if response.choices else None
+    if not message or not message.tool_calls:
+        break
+
+    messages.append(message)
     for tool_call in message.tool_calls:
         arguments = json.loads(tool_call.function.arguments or "{}")
         handler = tool_registry.HANDLERS.get(tool_call.function.name)
@@ -45,12 +44,6 @@ if message and message.tool_calls:
                 "content": output,
             }
         )
-    response = client.chat.completions.create(
-        model=os.getenv("OPENROUTER_MODEL"),
-        messages=messages,
-        tools=tool_registry.TOOLS,
-    )
-    message = response.choices[0].message if response.choices else None
 
 print("Response:", message.content if message else response)
 
